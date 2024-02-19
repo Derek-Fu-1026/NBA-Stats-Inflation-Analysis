@@ -9,7 +9,8 @@ setwd("D:/NBA-Stats-Inflation/src")
 library(rvest)
 library(dplyr)
 
-# A function to web-scrape per-game stats for given seasons:
+
+# A function to web-scrape per-game player stats for given seasons:
 get_player_stats = function(start_year, end_year) {
   
   all_seasons_stats = list()
@@ -40,6 +41,40 @@ get_player_stats = function(start_year, end_year) {
   
 }
 
+
+# A function to web-scrape per-game team stats for given seasons:
+get_team_stats_per_game = function(start_year, end_year) {
+  
+  all_seasons_stats = list()
+  
+  for (year in start_year:end_year) {
+    
+    url = paste0('https://www.basketball-reference.com/leagues/NBA_', year, '.html')
+    
+    # Read the HTML content from the URL
+    page = read_html(url)
+    
+    # Extract the HTML table
+    table = page %>%
+      html_nodes('table#per_game-team') %>%
+      html_table()
+    
+    # Convert the list to a data frame
+    df = as.data.frame(table)
+    
+    # Store the data frame in a list
+    all_seasons_stats[[year]] = df
+    
+    team_per_game_stats_df = bind_rows(all_seasons_stats, .id = "Season")
+    
+  }
+  
+  return(team_per_game_stats_df)
+  
+}
+
+# -----------------------------------------------------------------------------------------------
+
 # Example: scrape all the player per-game data from 1977 to 2024
 # Separate into 4 different data frames to avoid having problems requesting access to the website.
 
@@ -50,7 +85,25 @@ player_stats_4 = get_player_stats(2011, 2024)
 
 # Optional: store them in csv files for future use
 
-# write_csv(player_stats_df_1, "data/player_stats_1.csv")
-# write_csv(player_stats_df_2, "data/player_stats_2.csv")
-# write_csv(player_stats_df_3, "data/player_stats_3.csv")
-# write_csv(player_stats_df_4, "data/player_stats_4.csv")
+# write_csv(player_stats_1, "data/player_stats_1.csv")
+# write_csv(player_stats_2, "data/player_stats_2.csv")
+# write_csv(player_stats_3, "data/player_stats_3.csv")
+# write_csv(player_stats_4, "data/player_stats_4.csv")
+
+# -----------------------------------------------------------------------------------------------
+
+# Example: scrape all the team per-game data from 1977 to 2024
+# Separate into 4 different data frames to avoid having problems requesting access to the website.
+
+team_per_game_stats_1 = get_team_stats_per_game(1977, 1990)
+team_per_game_stats_2 = get_team_stats_per_game(1991, 2000)
+team_per_game_stats_3 = get_team_stats_per_game(2001, 2010)
+team_per_game_stats_4 = get_team_stats_per_game(2011, 2024)
+
+# Optional: store them in csv files for future use
+
+# write_csv(team_per_game_stats_1, "data/team_per_game_stats_1.csv")
+# write_csv(team_per_game_stats_2, "data/team_per_game_stats_2.csv")
+# write_csv(team_per_game_stats_3, "data/team_per_game_stats_3.csv")
+# write_csv(team_per_game_stats_4, "data/team_per_game_stats_4.csv")
+
