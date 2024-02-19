@@ -75,7 +75,7 @@ get_team_stats_per_game = function(start_year, end_year) {
 
 # -----------------------------------------------------------------------------------------------
 
-# Example: scrape all the player per-game data from 1977 to 2024
+# Example: scrape all the player per-game data from 1977 to 2024 (before All-Stars)
 # Separate into 4 different data frames to avoid having problems requesting access to the website.
 
 player_stats_1 = get_player_stats(1977, 1990)
