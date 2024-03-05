@@ -9,7 +9,7 @@ library(tidyverse)
 library(dplyr)
 library(readr)
 library(stringr)
-source("main/data_collection.R")
+# source("main/data_collection.R")
 
 
 # A function to rename column names to correct headers:
@@ -79,13 +79,51 @@ remove_traded_player_duplicates = function(df){
 
 
 # Automated Data Cleaning Process:
-auto_cleaning_player_data = function(df){
+auto_cleaning_player_data = function(df, start_year){
   
+  print("Renaming all columns...")
+  df = rename_column(df)
   
+  print("Removing duplicated headers...")
+  df = remove_duplicated_headers(df)
+  
+  print("Removing unnecessary symbols...")
+  df = remove_symbols(df)
+  
+  print("Updating the seasons...")
+  df = update_season(df, start_year)
+  
+  print("Removing duplicated players due to trades...")
+  df = remove_traded_player_duplicates(df)
+  
+  print("Finished data cleaning")
+  
+  return(df)
   
 }
 
 
+# -----------------------------------------------------------------------------------------------
 
 
 # Two ways to load data: read_csv or call the function from data_collection.R
+
+# Example: clean all the player data and merge the datasets:
+
+player_stats_1 = read_csv("data/player_stats_1.csv")
+player_stats_2 = read_csv("data/player_stats_2.csv")
+player_stats_3 = read_csv("data/player_stats_3.csv")
+player_stats_4 = read_csv("data/player_stats_4.csv")
+
+player_stats_1_cleaned = auto_cleaning_player_data(player_stats_1, start_year = 1977)
+player_stats_2_cleaned = auto_cleaning_player_data(player_stats_2, start_year = 1991)
+player_stats_3_cleaned = auto_cleaning_player_data(player_stats_3, start_year = 2001)
+player_stats_4_cleaned = auto_cleaning_player_data(player_stats_4, start_year = 2011)
+
+player_stats = bind_rows(list(player_stats_1_cleaned, player_stats_2_cleaned, 
+                              player_stats_3_cleaned, player_stats_4_cleaned))
+
+# Optional: store in csv files for future use
+
+write_csv(player_stats, "data/player_stats.csv")
+

@@ -1,0 +1,93 @@
+---
+title: "Stats Inflation Analysis"
+author: "Derek Fu"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "D:/NBA-Stats-Inflation/src")
+```
+
+```{r message=FALSE}
+
+source("main/data_extraction.R")
+source("main/gibbs_sampler.R")
+
+library(coda)
+
+```
+
+
+## Poisson-Gamma Model:  
+
+1. First, load the data and call the necessary functions to clean it:
+
+```{r message=FALSE}
+
+player_data = read_csv("data/player_stats.csv")
+
+top_10_scorers = get_top_n_scorers(player_data, 10)
+top_10_sum = get_top_scorers_sum(top_10_scorers)
+
+head(top_10_sum)
+
+```
+
+2. Modify some rows due to different numbers of games played in certain seasons:
+
+```{r}
+
+top_10_sum$Total_PTS[top_10_sum$Season == 1999] = as.integer(top_10_sum$Total_PTS[top_10_sum$Season == 1999] * (82/50))
+top_10_sum$Total_PTS[top_10_sum$Season == 2012] = as.integer(top_10_sum$Total_PTS[top_10_sum$Season == 1999] * (82/66))
+top_10_sum$Total_PTS[top_10_sum$Season == 2020] = as.integer(top_10_sum$Total_PTS[top_10_sum$Season == 1999] * (82/71))
+top_10_sum$Total_PTS[top_10_sum$Season == 2021] = as.integer(top_10_sum$Total_PTS[top_10_sum$Season == 1999] * (82/72))
+top_10_sum$Total_PTS[top_10_sum$Season == 2024] = as.integer(top_10_sum$Total_PTS[top_10_sum$Season == 1999] * (82/55))
+
+top_10_sum$Total_PTS = as.integer(top_10_sum$Total_PTS / 100)
+
+```
+
+3. Plot the data:
+
+```{r}
+
+plot(top_10_sum)
+
+```
+
+4. Run the models:
+
+```{r}
+
+result = run_poisson_model(top_10_sum$Total_PTS, alpha = 0.5, beta = 0.01)
+
+posterior_changepoint = result[[3]]
+
+hist(posterior_changepoint + 1977, breaks = 50)
+
+```
+
+
+```{r}
+
+result = run_poisson_model(top_10_sum$Total_PTS[-48], alpha = 0.5, beta = 0.01)
+
+posterior_changepoint = result[[3]]
+
+hist(posterior_changepoint + 1977, breaks = 50)
+ci = HPDinterval(as.mcmc(posterior_changepoint + 1977))
+abline(v = ci, lwd = 5, col = 'blue')
+
+```
+
+```{r}
+
+plot(top_10_sum$Season[-48], top_10_sum$Total_PTS[-48], main = 'Sum of Total Points of Top 10 Scorers');
+abline(v = ci, lwd = 5, col = 'blue')
+abline(v = mean(posterior_changepoint) + 1977, lwd = 5, col = 'red')
+
+```
+
+
