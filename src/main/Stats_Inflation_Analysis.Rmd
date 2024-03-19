@@ -16,6 +16,7 @@ source("main/data_extraction.R")
 source("main/gibbs_sampler.R")
 
 library(coda)
+set.seed(123)
 
 ```
 
@@ -89,5 +90,110 @@ abline(v = ci, lwd = 5, col = 'blue')
 abline(v = mean(posterior_changepoint) + 1977, lwd = 5, col = 'red')
 
 ```
+
+
+## Normal-Normal Model:
+
+1. First, load the team per game data and call the necessary functions to clean it:
+
+```{r message=FALSE}
+
+team_per_game_data = read_csv("data/team_per_game_stats.csv")
+
+mean_points_per_game = get_team_average_points(team_per_game_data)
+
+head(mean_points_per_game)
+
+```
+
+2. Plot the data:
+
+```{r}
+
+plot(mean_points_per_game)
+
+```
+
+3. Run the models:
+
+1) Assuming there is only one change-point:
+
+```{r}
+
+result = run_normal_model_one_changepoint(mean_points_per_game$AVG_PTS, alpha = 0.01, beta = 0.01, sigma_theta = 10)
+hist(result + 1977)
+
+```
+
+```{r}
+
+ci = HPDinterval(as.mcmc(result + 1977))
+
+plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Points Per Game Each Season');
+abline(v = ci, lwd = 5, col = 'blue')
+abline(v = mean(result) + 1977, lwd = 5, lty = 2, col = 'red')
+
+```
+
+
+
+2) Assuming there are two change-points:
+
+```{r}
+
+result = run_normal_model_two_changepoints(mean_points_per_game$AVG_PTS, alpha = 0.01, beta = 0.01, sigma_theta = 10)
+
+```
+
+```{r}
+
+posterior_changepoint1 = result[[1]]
+posterior_changepoint2 = result[[2]]
+
+hist(posterior_changepoint1 + 1977, breaks = 50)
+
+```
+
+```{r}
+
+hist(posterior_changepoint2 + 1977, breaks = 50)
+
+```
+
+```{r}
+
+ci_1 = HPDinterval(as.mcmc(posterior_changepoint1 + 1977))
+ci_2 = HPDinterval(as.mcmc(posterior_changepoint2 + 1977))
+
+plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Points Per Game Each Season');
+abline(v = ci_1, lwd = 5, col = 'blue')
+abline(v = mean(posterior_changepoint1) + 1977, lwd = 5, lty = 2, col = 'purple')
+abline(v = ci_2, lwd = 5, col = 'red')
+abline(v = mean(posterior_changepoint2) + 1977, lwd = 5, lty = 2, col = 'yellow')
+
+```
+
+4. Model diagnostics:
+
+```{r}
+
+plot(as.ts(posterior_changepoint1))
+
+```
+
+```{r}
+
+plot(as.ts(posterior_changepoint2))
+
+```
+
+```{r}
+
+effectiveSize(posterior_changepoint1); effectiveSize(posterior_changepoint2)
+
+```
+
+
+
 
 

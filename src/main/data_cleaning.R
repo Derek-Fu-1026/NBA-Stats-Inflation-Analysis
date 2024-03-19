@@ -32,12 +32,39 @@ rename_column = function(df){
   
 }
 
+rename_team_column = function(df){
+  
+  df = df %>%
+    rename(
+      `FG%` = "FG.",
+      `3P` = "X3P",
+      `3PA` = "X3PA",
+      `3P%` = "X3P.",
+      `2P` = "X2P",
+      `2PA` = "X2PA",
+      `2P%` = "X2P.",
+      `FT%` = "FT."
+    )
+  
+  return(df)
+  
+}
+
 
 # A function to remove the same rows to the headers:
 remove_duplicated_headers = function(df){
   
   df = df %>%
     filter(Rk != "Rk")
+  
+  return(df)
+  
+}
+
+remove_duplicated_team_headers = function(df){
+  
+  df = df %>%
+    filter(!is.na(Rk))
   
   return(df)
   
@@ -102,6 +129,26 @@ auto_cleaning_player_data = function(df, start_year){
   
 }
 
+auto_cleaning_team_data = function(df, start_year){
+  
+  print("Renaming all columns...")
+  df = rename_team_column(df)
+  
+  print("Removing duplicated headers...")
+  df = remove_duplicated_team_headers(df)
+  
+  print("Removing unnecessary symbols...")
+  df = remove_symbols(df)
+  
+  print("Updating the seasons...")
+  df = update_season(df, start_year)
+  
+  print("Finished data cleaning")
+  
+  return(df)
+  
+}
+
 
 # -----------------------------------------------------------------------------------------------
 
@@ -126,4 +173,25 @@ player_stats = bind_rows(list(player_stats_1_cleaned, player_stats_2_cleaned,
 # Optional: store in csv files for future use
 
 write_csv(player_stats, "data/player_stats.csv")
+
+# -----------------------------------------------------------------------------------------------
+
+# Same thing for the team data:
+
+team_per_game_1 = read_csv("data/team_per_game_stats_1.csv")
+team_per_game_2 = read_csv("data/team_per_game_stats_2.csv")
+team_per_game_3 = read_csv("data/team_per_game_stats_3.csv")
+team_per_game_4 = read_csv("data/team_per_game_stats_4.csv")
+
+team_per_game_1_cleaned = auto_cleaning_team_data(team_per_game_1, start_year = 1977)
+team_per_game_2_cleaned = auto_cleaning_team_data(team_per_game_2, start_year = 1991)
+team_per_game_3_cleaned = auto_cleaning_team_data(team_per_game_3, start_year = 2001)
+team_per_game_4_cleaned = auto_cleaning_team_data(team_per_game_4, start_year = 2011)
+
+team_per_game_stats = bind_rows(list(team_per_game_1_cleaned, team_per_game_2_cleaned, 
+                                     team_per_game_3_cleaned, team_per_game_4_cleaned))
+
+# Optional: store in csv files for future use
+
+write_csv(team_per_game_stats, "data/team_per_game_stats.csv")
 

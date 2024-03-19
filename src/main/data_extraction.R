@@ -37,3 +37,17 @@ get_top_scorers_sum = function(df) {
   
 }
 
+# A function to get the average points per game in each season:
+get_team_average_points = function(df){
+  
+  average_points = df %>%
+    group_by(Season) %>%
+    summarise(AVG_PTS = mean(as.numeric(PTS))) %>%
+    arrange(Season)
+  
+  return(average_points)
+  
+}
+
+
+
