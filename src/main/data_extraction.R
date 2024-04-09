@@ -37,6 +37,30 @@ get_top_scorers_sum = function(df) {
   
 }
 
+# A function to get the top teams in fouls each season:
+get_top_n_team_fouls = function(df, n_teams) {
+  
+  team_foul_data = df %>%
+    group_by(Season) %>%
+    mutate(Total_Fouls = as.integer(PF * G)) %>%
+    slice_max(order_by = Total_Fouls, n = n_teams) %>%
+    arrange(Season, desc(Total_Fouls))
+  
+  return(team_foul_data)
+  
+}
+
+# A function to get the sum of total team fouls by the top n teams in fouls each season:
+get_team_foul_sum = function(df) {
+  
+  team_foul_sum = df %>%
+    group_by(Season) %>%
+    summarise(Total_Fouls = sum(Total_Fouls))
+  
+  return(team_foul_sum)
+  
+}
+
 # A function to get the average points per game in each season:
 get_team_average_points = function(df){
   
@@ -46,6 +70,18 @@ get_team_average_points = function(df){
     arrange(Season)
   
   return(average_points)
+  
+}
+
+# A function to get the average team pace:
+get_team_average_pace = function(df){
+  
+  average_pace = df %>%
+    group_by(Season) %>%
+    summarise(AVG_Pace = mean(as.numeric(Pace))) %>%
+    arrange(Season)
+  
+  return(average_pace)
   
 }
 

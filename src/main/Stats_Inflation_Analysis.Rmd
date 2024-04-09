@@ -5,10 +5,6 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "D:/NBA-Stats-Inflation/src")
-```
 
 ```{r message=FALSE}
 
@@ -16,12 +12,19 @@ source("main/data_extraction.R")
 source("main/gibbs_sampler.R")
 
 library(coda)
+library(ggplot2)
+
 set.seed(123)
 
 ```
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "D:/NBA-Stats-Inflation/src")
+```
 
-## Poisson-Gamma Model:  
+
+## Poisson-Gamma Model on Total Points of Top Scorers:  
 
 1. First, load the data and call the necessary functions to clean it:
 
@@ -50,11 +53,31 @@ top_10_sum$Total_PTS = as.integer(top_10_sum$Total_PTS / 100)
 
 ```
 
+Also, check the mean and variance for Poisson assumption:
+
+```{r}
+
+mean(top_10_sum$Total_PTS); var(top_10_sum$Total_PTS)
+
+```
+
+
 3. Plot the data:
 
 ```{r}
 
-plot(top_10_sum)
+# top_10_sum$Season = factor(top_10_sum$Season)
+
+ggplot(top_10_sum, aes(x = as.factor(Season), y = Total_PTS)) +
+  geom_point(color = "blue", size = 2) + 
+  labs(
+    title = "Total Points Scored by Top 10 NBA Scorers Each Season",
+    x = "Season",
+    y = "Total Points (in hundreds)",
+    caption = "Data Source: BBR"
+  ) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
@@ -62,37 +85,146 @@ plot(top_10_sum)
 
 ```{r}
 
-result = run_poisson_model(top_10_sum$Total_PTS, alpha = 0.5, beta = 0.01)
-
-posterior_changepoint = result[[3]]
-
-hist(posterior_changepoint + 1977, breaks = 50)
-
-```
-
-
-```{r}
+# result = run_poisson_model(top_10_sum$Total_PTS, alpha = 0.5, beta = 0.01)
+# posterior_changepoint = result[[3]]
+# hist(posterior_changepoint + 1977, breaks = 50)
 
 result = run_poisson_model(top_10_sum$Total_PTS[-48], alpha = 0.5, beta = 0.01)
-
 posterior_changepoint = result[[3]]
-
-hist(posterior_changepoint + 1977, breaks = 50)
 ci = HPDinterval(as.mcmc(posterior_changepoint + 1977))
-abline(v = ci, lwd = 5, col = 'blue')
+
+# Plot histogram of potential change-points:
+hist(posterior_changepoint + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential Changepoints",
+     xlab = "Potential Change-point Season in Top Scorers",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
 
 ```
 
 ```{r}
 
-plot(top_10_sum$Season[-48], top_10_sum$Total_PTS[-48], main = 'Sum of Total Points of Top 10 Scorers');
-abline(v = ci, lwd = 5, col = 'blue')
-abline(v = mean(posterior_changepoint) + 1977, lwd = 5, col = 'red')
+ci = HPDinterval(as.mcmc(posterior_changepoint + 1977))
+mean_posterior = round(mean(posterior_changepoint) + 1977)
+
+plot(top_10_sum$Season[-48], top_10_sum$Total_PTS[-48],
+     main = 'Total Points Scored by Top 10 NBA Scorers Each Season',
+     xlab = 'Season', ylab = 'Total Points', col = 'black', pch = 16)
+
+points(top_10_sum$Season[-48], top_10_sum$Total_PTS[-48], col = 'black', pch = 19)
+abline(v = ci, col = 'blue', lwd = 2)
+abline(v = mean_posterior, col = 'red', lwd = 2)
+
+# Add legend
+legend("topright", legend = c("Total Points", "95% Credible Interval", "Posterior Mean"),
+       col = c("black", "blue", "red"), pch = c(19, NA, NA), lwd = 2, cex = 0.5,
+       title = "Legend")
 
 ```
 
 
-## Normal-Normal Model:
+5. Check convergence: 
+
+```{r}
+
+plot(as.ts(posterior_changepoint))
+
+```
+
+```{r}
+
+effectiveSize(posterior_changepoint)
+
+```
+
+## Poisson-Gamma Model on Total Number of Team Fouls:
+
+```{r}
+
+top_10_team_fouls = get_top_n_team_fouls(team_per_game_data, 10)
+top_10_foul_sum = get_team_foul_sum(top_10_team_fouls)
+
+head(top_10_foul_sum)
+
+```
+
+Similarly, check mean and variance after some modifications:  
+
+```{r}
+
+top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 1999] = as.integer(top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 1999] * (82/50))
+top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 2012] = as.integer(top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 1999] * (82/66))
+top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 2020] = as.integer(top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 1999] * (82/71))
+top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 2021] = as.integer(top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 1999] * (82/72))
+top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 2024] = as.integer(top_10_foul_sum$Total_Fouls[top_10_foul_sum$Season == 1999] * (82/55))
+
+top_10_foul_sum$Total_Fouls = as.integer(top_10_foul_sum$Total_Fouls / 100)
+
+```
+
+```{r}
+
+mean(top_10_foul_sum$Total_Fouls); var(top_10_foul_sum$Total_Fouls)
+
+```
+
+```{r}
+
+ggplot(top_10_foul_sum, aes(x = as.factor(Season), y = Total_Fouls)) +
+  geom_point(color = "blue", size = 2) + 
+  labs(
+    title = "Total Team Fouls by Top 10 Teams in Fouls Each Season",
+    x = "Season",
+    y = "Total Points (in hundreds)",
+    caption = "Data Source: BBR"
+  ) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+
+result = run_poisson_model(top_10_foul_sum$Total_Fouls[-48], alpha = 0.5, beta = 0.01)
+posterior_changepoint = result[[3]]
+ci = HPDinterval(as.mcmc(posterior_changepoint + 1977))
+
+# Plot histogram of potential change-points:
+hist(posterior_changepoint + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential Changepoints",
+     xlab = "Potential Change-point Season",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
+
+```
+
+```{r}
+
+ci = HPDinterval(as.mcmc(posterior_changepoint + 1977))
+mean_posterior = round(mean(posterior_changepoint) + 1977)
+
+plot(top_10_foul_sum$Season[-48], top_10_foul_sum$Total_Fouls[-48],
+     main = 'Total Team Fouls by Top 10 Teams in Fouls Each Season',
+     xlab = 'Season', ylab = 'Total Points', col = 'black', pch = 16)
+
+points(top_10_foul_sum$Season[-48], top_10_foul_sum$Total_Fouls[-48], col = 'black', pch = 19)
+abline(v = ci, col = 'blue', lwd = 2)
+abline(v = mean_posterior, col = 'red', lwd = 2)
+
+# Add legend
+legend("topright", legend = c("Total Points", "95% Credible Interval", "Posterior Mean"),
+       col = c("black", "blue", "red"), pch = c(19, NA, NA), lwd = 2, cex = 0.5,
+       title = "Legend")
+
+```
+
+## Normal-Normal Model on Average Team Score:
 
 1. First, load the team per game data and call the necessary functions to clean it:
 
@@ -107,6 +239,13 @@ head(mean_points_per_game)
 ```
 
 2. Plot the data:
+
+```{r}
+
+hist(team_per_game_data$PTS, breaks = 50)
+
+```
+
 
 ```{r}
 
@@ -193,7 +332,69 @@ effectiveSize(posterior_changepoint1); effectiveSize(posterior_changepoint2)
 
 ```
 
+## Normal-Normal Model on Team Pace
+
+```{r warning=FALSE}
+
+team_advanced_data = read_csv("data/team_advanced_stats.csv")
+
+average_team_pace = get_team_average_pace(team_advanced_data)
+
+head(average_team_pace)
+
+```
+
+```{r}
+
+plot(average_team_pace)
+
+```
+
+One change-point Model:
+
+```{r}
+
+result = run_normal_model_one_changepoint(average_team_pace$AVG_Pace, alpha = 0.01, beta = 0.01, sigma_theta = 10)
+hist(result + 1977)
+
+```
+
+```{r}
+
+ci = HPDinterval(as.mcmc(result + 1977))
+
+plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Team Pace Each Season');
+abline(v = ci, lwd = 5, col = 'blue')
+abline(v = mean(result) + 1977, lwd = 5, lty = 2, col = 'red')
+
+```
+
+Two change-points model:
+
+```{r}
+
+result = run_normal_model_two_changepoints(average_team_pace$AVG_Pace, alpha = 0.01, beta = 0.01, sigma_theta = 10)
+
+```
+
+```{r}
+
+ci_1 = HPDinterval(as.mcmc(posterior_changepoint1 + 1977))
+ci_2 = HPDinterval(as.mcmc(posterior_changepoint2 + 1977))
+
+plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Team Pace Each Season');
+abline(v = ci_1, lwd = 5, col = 'blue')
+abline(v = mean(posterior_changepoint1) + 1977, lwd = 5, lty = 2, col = 'purple')
+abline(v = ci_2, lwd = 5, col = 'red')
+abline(v = mean(posterior_changepoint2) + 1977, lwd = 5, lty = 2, col = 'yellow')
+
+```
 
 
-
+Next steps:
+1. Offensive/defensive ratings
+2. Pace
+3. Fouls
+4. FT% (prove the results from previous works)
+5. Share overleaf
 

@@ -70,6 +70,19 @@ remove_duplicated_team_headers = function(df){
   
 }
 
+# A function to remove current headers:
+remove_and_set_header = function(df) {
+  
+  # Remove current header
+  new_df = df[-1, ]
+  
+  # Set the first row as the new header
+  colnames(new_df) = unlist(df[1, ])
+  
+  return(new_df)
+  
+}
+
 
 # A function to remove special symbols like * from the data frame:
 remove_symbols = function(df){
@@ -88,6 +101,13 @@ update_season = function(df, start_year){
   df$Season = as.numeric(df$Season) + start_year - 1
   
   return(df)
+  
+}
+
+# A function to drop unnecessary columns in advanced data:
+drop_unnecessary_columns = function(df) {
+  
+  return(df[, 1:16, drop = FALSE])
   
 }
 
@@ -149,6 +169,31 @@ auto_cleaning_team_data = function(df, start_year){
   
 }
 
+auto_cleaning_advanced_data = function(df, start_year){
+  
+  print("Dropping unnecessary columns...")
+  df = drop_unnecessary_columns(df)
+  
+  print("Removing current headers...")
+  df = remove_and_set_header(df)
+  
+  colnames(df)[1] = "Season"
+  
+  print("Removing duplicated headers...")
+  df = remove_duplicated_headers(df)
+  
+  print("Removing unnecessary symbols...")
+  df = remove_symbols(df)
+  
+  print("Updating the seasons...")
+  df = update_season(df, start_year)
+  
+  print("Finished data cleaning")
+  
+  return(df)
+  
+}
+
 
 # -----------------------------------------------------------------------------------------------
 
@@ -194,4 +239,25 @@ team_per_game_stats = bind_rows(list(team_per_game_1_cleaned, team_per_game_2_cl
 # Optional: store in csv files for future use
 
 write_csv(team_per_game_stats, "data/team_per_game_stats.csv")
+
+# -----------------------------------------------------------------------------------------------
+
+# Same thing for the team advanced data:
+
+team_advanced_1 = read_csv("data/team_advanced_stats_1.csv")
+team_advanced_2 = read_csv("data/team_advanced_stats_2.csv")
+team_advanced_3 = read_csv("data/team_advanced_stats_3.csv")
+team_advanced_4 = read_csv("data/team_advanced_stats_4.csv")
+
+team_advanced_1_cleaned = auto_cleaning_advanced_data(team_advanced_1, start_year = 1977)
+team_advanced_2_cleaned = auto_cleaning_advanced_data(team_advanced_2, start_year = 1991)
+team_advanced_3_cleaned = auto_cleaning_advanced_data(team_advanced_3, start_year = 2001)
+team_advanced_4_cleaned = auto_cleaning_advanced_data(team_advanced_4, start_year = 2011)
+
+team_advanced_stats = bind_rows(list(team_advanced_1_cleaned, team_advanced_2_cleaned, 
+                                     team_advanced_3_cleaned, team_advanced_4_cleaned))
+
+# Optional: store in csv files for future use
+
+write_csv(team_advanced_stats, "data/team_advanced_stats.csv")
 
