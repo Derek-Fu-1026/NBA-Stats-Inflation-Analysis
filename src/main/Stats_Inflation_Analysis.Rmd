@@ -111,7 +111,7 @@ ci = HPDinterval(as.mcmc(posterior_changepoint + 1977))
 mean_posterior = round(mean(posterior_changepoint) + 1977)
 
 plot(top_10_sum$Season[-48], top_10_sum$Total_PTS[-48],
-     main = 'Total Points Scored by Top 10 NBA Scorers Each Season',
+     main = 'Total Points by Top 10 NBA Scorers (Change-point in Late 1990s)',
      xlab = 'Season', ylab = 'Total Points', col = 'black', pch = 16)
 
 points(top_10_sum$Season[-48], top_10_sum$Total_PTS[-48], col = 'black', pch = 19)
@@ -143,6 +143,8 @@ effectiveSize(posterior_changepoint)
 ## Poisson-Gamma Model on Total Number of Team Fouls:
 
 ```{r}
+
+team_per_game_data = read_csv("data/team_per_game_stats.csv")
 
 top_10_team_fouls = get_top_n_team_fouls(team_per_game_data, 10)
 top_10_foul_sum = get_team_foul_sum(top_10_team_fouls)
@@ -210,15 +212,15 @@ ci = HPDinterval(as.mcmc(posterior_changepoint + 1977))
 mean_posterior = round(mean(posterior_changepoint) + 1977)
 
 plot(top_10_foul_sum$Season[-48], top_10_foul_sum$Total_Fouls[-48],
-     main = 'Total Team Fouls by Top 10 Teams in Fouls Each Season',
-     xlab = 'Season', ylab = 'Total Points', col = 'black', pch = 16)
+     main = 'Total Fouls by Top 10 Teams in Fouls (Change-point in 1990s)',
+     xlab = 'Season', ylab = 'Total Team Fouls', col = 'black', pch = 16)
 
 points(top_10_foul_sum$Season[-48], top_10_foul_sum$Total_Fouls[-48], col = 'black', pch = 19)
 abline(v = ci, col = 'blue', lwd = 2)
 abline(v = mean_posterior, col = 'red', lwd = 2)
 
 # Add legend
-legend("topright", legend = c("Total Points", "95% Credible Interval", "Posterior Mean"),
+legend("topright", legend = c("Total Fouls", "95% Credible Interval", "Posterior Mean"),
        col = c("black", "blue", "red"), pch = c(19, NA, NA), lwd = 2, cex = 0.5,
        title = "Legend")
 
@@ -242,14 +244,31 @@ head(mean_points_per_game)
 
 ```{r}
 
-hist(team_per_game_data$PTS, breaks = 50)
+# Create the histogram with correct title
+ggplot(data = team_per_game_data, aes(x = PTS)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  labs(
+    title = "Distribution of Average Team Score",
+    x = "Team Score Per Game",
+    y = "Frequency"
+  ) +
+  theme_minimal()
 
 ```
 
 
 ```{r}
 
-plot(mean_points_per_game)
+ggplot(mean_points_per_game, aes(x = as.factor(Season), y = AVG_PTS)) +
+  geom_point(color = "blue", size = 2) + 
+  labs(
+    title = "Average Team Score By Season",
+    x = "Season",
+    y = "Average Team Score",
+    caption = "Data Source: BBR"
+  ) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
@@ -260,20 +279,40 @@ plot(mean_points_per_game)
 ```{r}
 
 result = run_normal_model_one_changepoint(mean_points_per_game$AVG_PTS, alpha = 0.01, beta = 0.01, sigma_theta = 10)
-hist(result + 1977)
+
+ci = HPDinterval(as.mcmc(result + 1977))
+
+# Plot histogram of potential change-points:
+hist(result + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential Changepoints",
+     xlab = "Potential Change-point Season",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
 
 ```
 
 ```{r}
 
 ci = HPDinterval(as.mcmc(result + 1977))
+mean_posterior = round(mean(result) + 1977)
 
-plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Points Per Game Each Season');
-abline(v = ci, lwd = 5, col = 'blue')
-abline(v = mean(result) + 1977, lwd = 5, lty = 2, col = 'red')
+plot(mean_points_per_game$Season[-48], mean_points_per_game$AVG_PTS[-48],
+     main = 'Average Team Score by Season (Change-point in Early 1990s)',
+     xlab = 'Season', ylab = 'Average Team Score', col = 'black', pch = 16)
+
+points(mean_points_per_game$Season[-48], mean_points_per_game$AVG_PTS[-48], col = 'black', pch = 19)
+abline(v = ci, col = 'blue', lwd = 2)
+abline(v = mean_posterior, col = 'red', lwd = 2)
+
+# Add legend
+legend("topright", legend = c("Average Team Score", "95% Credible Interval", "Posterior Mean"),
+       col = c("black", "blue", "red"), pch = c(19, NA, NA), lwd = 2, cex = 0.5,
+       title = "Legend")
 
 ```
-
 
 
 2) Assuming there are two change-points:
@@ -289,28 +328,63 @@ result = run_normal_model_two_changepoints(mean_points_per_game$AVG_PTS, alpha =
 posterior_changepoint1 = result[[1]]
 posterior_changepoint2 = result[[2]]
 
-hist(posterior_changepoint1 + 1977, breaks = 50)
+ci = HPDinterval(as.mcmc(posterior_changepoint1 + 1977))
+
+# Plot histogram of potential change-points:
+hist(posterior_changepoint1 + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential First Change-point",
+     xlab = "Potential Change-point Season",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
 
 ```
 
 ```{r}
 
-hist(posterior_changepoint2 + 1977, breaks = 50)
+ci = HPDinterval(as.mcmc(posterior_changepoint2 + 1977))
+
+# Plot histogram of potential change-points:
+hist(posterior_changepoint2 + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential Second Change-point",
+     xlab = "Potential Change-point Season",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
 
 ```
+
 
 ```{r}
 
 ci_1 = HPDinterval(as.mcmc(posterior_changepoint1 + 1977))
 ci_2 = HPDinterval(as.mcmc(posterior_changepoint2 + 1977))
 
-plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Points Per Game Each Season');
-abline(v = ci_1, lwd = 5, col = 'blue')
-abline(v = mean(posterior_changepoint1) + 1977, lwd = 5, lty = 2, col = 'purple')
-abline(v = ci_2, lwd = 5, col = 'red')
-abline(v = mean(posterior_changepoint2) + 1977, lwd = 5, lty = 2, col = 'yellow')
+# Create the plot
+plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS,
+     main = 'Average Team Score by Season (Two Change-points)',
+     xlab = 'Season', ylab = 'Average Team Score',
+     col = 'black', pch = 16)
+
+# Add vertical lines for credible intervals and posterior means for change point 1
+abline(v = ci_1, lwd = 2, col = 'blue')
+abline(v = mean(posterior_changepoint1) + 1977, lwd = 2, lty = 2, col = 'purple')
+
+# Add vertical lines for credible intervals and posterior means for change point 2
+abline(v = ci_2, lwd = 2, col = 'red')
+abline(v = mean(posterior_changepoint2) + 1977, lwd = 2, lty = 2, col = 'yellow')
+
+# Add smaller legend
+legend("topright", legend = c("Change Point 1 CI", "Change Point 1 Mean", "Change Point 2 CI", "Change Point 2 Mean"),
+       col = c("blue", "purple", "red", "yellow"), lwd = 2, lty = c(1, 2, 1, 2), cex = 0.4,
+       title = "Legend")
 
 ```
+
 
 4. Model diagnostics:
 
@@ -346,28 +420,60 @@ head(average_team_pace)
 
 ```{r}
 
-plot(average_team_pace)
+ggplot(average_team_pace, aes(x = as.factor(Season), y = AVG_Pace)) +
+  geom_point(color = "blue", size = 2) + 
+  labs(
+    title = "Average Team Pace By Season",
+    x = "Season",
+    y = "Average Team Pace",
+    caption = "Data Source: BBR"
+  ) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+
 
 One change-point Model:
 
 ```{r}
 
 result = run_normal_model_one_changepoint(average_team_pace$AVG_Pace, alpha = 0.01, beta = 0.01, sigma_theta = 10)
-hist(result + 1977)
+
+ci = HPDinterval(as.mcmc(result + 1977))
+
+# Plot histogram of potential change-points:
+hist(result + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential Changepoints",
+     xlab = "Potential Change-point Season",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
 
 ```
 
 ```{r}
 
 ci = HPDinterval(as.mcmc(result + 1977))
+mean_posterior = round(mean(result) + 1977)
 
-plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Team Pace Each Season');
-abline(v = ci, lwd = 5, col = 'blue')
-abline(v = mean(result) + 1977, lwd = 5, lty = 2, col = 'red')
+plot(average_team_pace$Season[-48], average_team_pace$AVG_Pace[-48],
+     main = 'Average Team Pace by Season (Change-point in Early 1990s)',
+     xlab = 'Season', ylab = 'Average Team Pace', col = 'black', pch = 16)
+
+points(average_team_pace$Season[-48], average_team_pace$AVG_Pace[-48], col = 'black', pch = 19)
+abline(v = ci, col = 'blue', lwd = 2)
+abline(v = mean_posterior, col = 'red', lwd = 2)
+
+# Add legend
+legend("topright", legend = c("Average Team Pace", "95% Credible Interval", "Posterior Mean"),
+       col = c("black", "blue", "red"), pch = c(19, NA, NA), lwd = 2, cex = 0.5,
+       title = "Legend")
 
 ```
+
 
 Two change-points model:
 
@@ -377,24 +483,75 @@ result = run_normal_model_two_changepoints(average_team_pace$AVG_Pace, alpha = 0
 
 ```
 
+Histograms of change-points:
+
 ```{r}
+
+posterior_changepoint1 = result[[1]]
+posterior_changepoint2 = result[[2]]
+
+ci = HPDinterval(as.mcmc(posterior_changepoint1 + 1977))
+
+# Plot histogram of potential change-points:
+hist(posterior_changepoint1 + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential First Change-point",
+     xlab = "Potential Change-point Season",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
+
+```
+
+
+```{r}
+
+ci = HPDinterval(as.mcmc(posterior_changepoint2 + 1977))
+
+# Plot histogram of potential change-points:
+hist(posterior_changepoint2 + 1977, breaks = 50, col = "skyblue", border = "black",
+     main = "Histogram of Potential Second Change-point",
+     xlab = "Potential Change-point Season",
+     ylab = "Frequency")
+
+# Add the credible intervals and the corresponding legend:
+abline(v = ci, lwd = 3, col = 'blue')
+legend("topright", legend = "95% Credible Interval", col = "blue", lwd = 3, cex = 0.5)
+
+```
+
+
+```{r}
+
+posterior_changepoint1 = result[[1]]
+posterior_changepoint2 = result[[2]]
 
 ci_1 = HPDinterval(as.mcmc(posterior_changepoint1 + 1977))
 ci_2 = HPDinterval(as.mcmc(posterior_changepoint2 + 1977))
 
-plot(mean_points_per_game$Season, mean_points_per_game$AVG_PTS, main = 'Average Team Pace Each Season');
-abline(v = ci_1, lwd = 5, col = 'blue')
-abline(v = mean(posterior_changepoint1) + 1977, lwd = 5, lty = 2, col = 'purple')
-abline(v = ci_2, lwd = 5, col = 'red')
-abline(v = mean(posterior_changepoint2) + 1977, lwd = 5, lty = 2, col = 'yellow')
+# Create the plot
+plot(average_team_pace$Season, average_team_pace$AVG_Pace,
+     main = 'Average Team Pace by Season (Two Change-points)',
+     xlab = 'Season', ylab = 'Average Team Pace',
+     col = 'black', pch = 16)
+
+# Add vertical lines for credible intervals and posterior means for change point 1
+abline(v = ci_1, lwd = 2, col = 'blue')
+abline(v = mean(posterior_changepoint1) + 1977, lwd = 2, lty = 2, col = 'purple')
+
+# Add vertical lines for credible intervals and posterior means for change point 2
+abline(v = ci_2, lwd = 2, col = 'red')
+abline(v = mean(posterior_changepoint2) + 1977, lwd = 2, lty = 2, col = 'yellow')
+
+# Add smaller legend
+legend("topright", legend = c("Change Point 1 CI", "Change Point 1 Mean", "Change Point 2 CI", "Change Point 2 Mean"),
+       col = c("blue", "purple", "red", "yellow"), lwd = 2, lty = c(1, 2, 1, 2), cex = 0.4,
+       title = "Legend")
 
 ```
 
 
 Next steps:
 1. Offensive/defensive ratings
-2. Pace
-3. Fouls
-4. FT% (prove the results from previous works)
-5. Share overleaf
-
+2. FT% (prove the results from previous works)
